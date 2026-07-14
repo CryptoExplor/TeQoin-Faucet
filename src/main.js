@@ -48,6 +48,7 @@ const els = {
   headerH1: document.getElementById('header-h1'),
   // links
   explorerLink: document.getElementById('explorer-link'),
+  tgBotLink: document.getElementById('tg-bot-link'),
 };
 
 // Set static hrefs
@@ -131,11 +132,22 @@ const WALLET_BOT_URL = 'https://t.me/TeQoin_Wallet_Bot/app';
 
 els.teqoinWalletBtn.addEventListener('click', () => {
   if (tg?.openTelegramLink) {
+    // Open in background/overlay within Telegram (keeps faucet app active in background stack)
     tg.openTelegramLink(WALLET_BOT_URL);
   } else {
     window.open(WALLET_BOT_URL, '_blank', 'noopener');
   }
 });
+
+// Bottom link: open the wallet bot in background/overlay (same as the top button)
+if (els.tgBotLink) {
+  els.tgBotLink.addEventListener('click', (e) => {
+    if (tg?.openTelegramLink) {
+      e.preventDefault();
+      tg.openTelegramLink(WALLET_BOT_URL);
+    }
+  });
+}
 
 // When user returns to the faucet after visiting the wallet bot,
 // auto-try to read whatever they copied from the clipboard.
