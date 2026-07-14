@@ -1,4 +1,4 @@
-import { FAUCET_TOKENS, APP_METADATA, LINKS, WALLET_LOOKUP_API, isLikelyAddress } from './config.js';
+import { FAUCET_TOKENS, APP_METADATA, LINKS, WALLET_LOOKUP_API, isLikelyAddress, recordClaim, getLastClaimTime, formatTimeAgo } from './config.js';
 import { claimFaucet } from './faucet.js';
 import { inject } from '@vercel/analytics';
 
@@ -282,13 +282,21 @@ function setHint(text, type = '') {
 
 function validateAddress() {
   const val = els.addressInput.value.trim();
-  if (val === '') { setHint(''); els.addressInput.classList.remove('invalid'); }
-  else if (!isLikelyAddress(val)) {
+  if (val === '') {
+    setHint('');
+    els.addressInput.classList.remove('invalid');
+  } else if (!isLikelyAddress(val)) {
     els.addressInput.classList.add('invalid');
     setHint('Not a valid 0x address — must be 42 hex characters.', 'error');
   } else {
     els.addressInput.classList.remove('invalid');
-    setHint('');
+    // Show last-claim hint for THIS address only (informational, never blocking)
+    const lastClaim = getLastClaimTime(val);
+    if (lastClaim) {
+      setHint(`Last claimed ${formatTimeAgo(lastClaim)} on this device — the faucet may still be on cooldown.`, '');
+    } else {
+      setHint('');
+    }
   }
   updateClaimEnabled();
 }
@@ -359,7 +367,7 @@ function setTelegramMainButton(visible) {
   if (!tg?.MainButton) return;
   if (visible) {
     tg.MainButton.setText('CLAIM TOKENS');
-    tg.MainButton.setParams({ color: '#17E3C4', text_color: '#040A0C' });
+    tg.MainButton.setParams({ color: '#ffbe26', text_color: '#040A0C' });
     tg.MainButton.show();
   } else {
     tg.MainButton.hide();
@@ -368,11 +376,38 @@ function setTelegramMainButton(visible) {
 if (tg?.MainButton) tg.MainButton.onClick(handleClaim);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status helper
+// Status helpers
+// SECURITY: status text always goes through textContent — never innerHTML.
+// The one case that needs a real link (tx hash) is built with explicit DOM
+// nodes so external text can never inject or execute markup.
 // ─────────────────────────────────────────────────────────────────────────────
-function setStatus(html, type = '') {
-  els.statusBox.innerHTML = html;
+const SVG_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+function setStatus(text, type = '') {
+  els.statusBox.textContent = text;
   els.statusBox.className = `status-box ${type}`;
+}
+
+function setStatusSuccessWithTx(txHash) {
+  els.statusBox.textContent = '';
+  els.statusBox.className = 'status-box success';
+
+  // SVG checkmark icon
+  const iconSpan = document.createElement('span');
+  iconSpan.innerHTML = SVG_CHECK;
+  els.statusBox.appendChild(iconSpan);
+
+  els.statusBox.appendChild(document.createTextNode('Claimed successfully!'));
+
+  if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+    els.statusBox.appendChild(document.createTextNode(' '));
+    const link = document.createElement('a');
+    link.href = `${LINKS.explorer}/tx/${txHash}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = `${txHash.slice(0, 12)}…↗`;
+    els.statusBox.appendChild(link);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -405,10 +440,8 @@ async function handleClaim() {
     const result = await claimFaucet({ wallet, nativeOnly });
 
     if (result.success) {
-      const txPart = result.txHash
-        ? ` &nbsp;<a href="${LINKS.explorer}/tx/${result.txHash}" target="_blank" rel="noopener">${result.txHash.slice(0, 12)}…↗</a>`
-        : '';
-      setStatus(`✅ Claimed successfully!${txPart}`, 'success');
+      recordClaim(wallet);
+      setStatusSuccessWithTx(result.txHash);
       tg?.HapticFeedback?.notificationOccurred('success');
     } else {
       setStatus(result.message || 'Claim failed. Try again later.', 'error');
