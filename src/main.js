@@ -1,5 +1,9 @@
 import { FAUCET_TOKENS, APP_METADATA, LINKS, WALLET_LOOKUP_API, isLikelyAddress } from './config.js';
 import { claimFaucet } from './faucet.js';
+import { inject } from '@vercel/analytics';
+
+// Initialize Vercel Web Analytics
+inject();
 
 document.title = APP_METADATA.name;
 
