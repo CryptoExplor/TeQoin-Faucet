@@ -59,6 +59,11 @@
 
     html {
       height: 100%;
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    html::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
     }
 
     body {
@@ -69,6 +74,11 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overscroll-behavior: none;
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    body::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
     }
 
     /* Ambient glow background */
@@ -88,8 +98,8 @@
       z-index: 1;
       max-width: 460px;
       margin: 0 auto;
-      padding: 20px 16px 110px;
-      min-height: 100vh;
+      padding: 20px 16px 24px;
+      min-height: 100%;
     }
 
     /* ─── Header ──────────────────────────────────────── */
