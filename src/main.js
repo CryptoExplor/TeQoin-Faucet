@@ -367,7 +367,7 @@ function setTelegramMainButton(visible) {
   if (!tg?.MainButton) return;
   if (visible) {
     tg.MainButton.setText('CLAIM TOKENS');
-    tg.MainButton.setParams({ color: '#ffbe26', text_color: '#040A0C' });
+    tg.MainButton.setParams({ color: '#0153fd', text_color: '#ffffff' });
     tg.MainButton.show();
   } else {
     tg.MainButton.hide();
