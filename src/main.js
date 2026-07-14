@@ -127,7 +127,7 @@ async function tryAutoFetchWallet() {
 // tg.onEvent('activated') fires and we auto-try clipboard paste so their
 // copied address fills in with zero effort.
 // ─────────────────────────────────────────────────────────────────────────────
-const WALLET_BOT_URL = 'https://t.me/TeQoin_Wallet_Bot';
+const WALLET_BOT_URL = 'https://t.me/TeQoin_Wallet_Bot/app';
 
 els.teqoinWalletBtn.addEventListener('click', () => {
   if (tg?.openTelegramLink) {

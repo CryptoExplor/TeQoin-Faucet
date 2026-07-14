@@ -29,7 +29,7 @@ export const FAUCET_TOKENS = [
 ];
 
 export const LINKS = {
-  telegram: 'https://t.me/TeQoin_Wallet_Bot',
+  telegram: 'https://t.me/TeQoin_Wallet_Bot/app',
   explorer: 'https://testnet-blockscan.teqoin.io',
 };
 
