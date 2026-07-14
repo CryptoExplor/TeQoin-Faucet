@@ -10,7 +10,7 @@ export const FAUCET_API = 'https://api2.teqoin.io/api/v1/Faucet/Claim';
 // nativeOnly: true  → ETH only
 // nativeOnly: false → ETH + USDT + USDC + DAI (25 each)
 export const FAUCET_TOKENS = [
-  { symbol: 'ETH',  label: 'ETH',  alwaysIncluded: true,  amountLabel: 'network amount' },
+  { symbol: 'ETH',  label: 'ETH',  alwaysIncluded: true,  amountLabel: '0.001 ETH' },
   { symbol: 'USDT', label: 'USDT', alwaysIncluded: false, amountLabel: '25 tokens' },
   { symbol: 'USDC', label: 'USDC', alwaysIncluded: false, amountLabel: '25 tokens' },
   { symbol: 'DAI',  label: 'DAI',  alwaysIncluded: false, amountLabel: '25 tokens' },
