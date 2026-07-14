@@ -1,4 +1,4 @@
-import { FAUCET_TOKENS, APP_METADATA, LINKS, isLikelyAddress } from './config.js';
+import { FAUCET_TOKENS, APP_METADATA, LINKS, WALLET_LOOKUP_API, isLikelyAddress } from './config.js';
 import { claimFaucet } from './faucet.js';
 
 document.title = APP_METADATA.name;
@@ -27,6 +27,10 @@ const els = {
   addressHint: document.getElementById('address-hint'),
   pasteBtn: document.getElementById('paste-btn'),
   detectBtn: document.getElementById('detect-btn'),
+  teqoinWalletBtn: document.getElementById('teqoin-wallet-btn'),
+  autofetchRow: document.getElementById('autofetch-row'),
+  autofetchStatus: document.getElementById('autofetch-status'),
+  autofetchSpinner: document.getElementById('autofetch-spinner'),
   walletLinks: document.getElementById('wallet-app-links'),
   metamaskLink: document.getElementById('metamask-link'),
   trustLink: document.getElementById('trust-link'),
@@ -44,6 +48,116 @@ const els = {
 
 // Set static hrefs
 els.explorerLink.href = LINKS.explorer;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-fetch wallet address from TeQoin backend using Telegram user ID
+//
+// HOW IT WORKS:
+//   1. Telegram passes tg.initData to every Mini App — it contains the user's
+//      Telegram user ID, signed with HMAC so it cannot be forged.
+//   2. We send that raw initData string to the TeQoin API as proof of identity.
+//   3. The backend validates the hash, finds the wallet for that user ID,
+//      and returns it.
+//
+// TO ACTIVATE:
+//   Ask the TeQoin team to expose an endpoint such as:
+//     POST https://api2.teqoin.io/api/v1/User/Wallet
+//     Body: { initData: "..." }
+//     Response: { wallet: "0x..." }
+//
+//   Then set WALLET_LOOKUP_API in src/config.js to that URL.
+//   While it is null the auto-fetch is silently skipped.
+// ─────────────────────────────────────────────────────────────────────────────
+async function tryAutoFetchWallet() {
+  // Silently skip if API not configured yet
+  if (!WALLET_LOOKUP_API) return;
+
+  // Only run inside Telegram where initData is available
+  const initData = tg?.initData;
+  if (!initData) return;
+
+  // Already has an address — don't overwrite user's input
+  if (isLikelyAddress(els.addressInput.value)) return;
+
+  // Show loading state
+  els.autofetchRow.classList.add('visible');
+  els.autofetchStatus.textContent = 'Looking up your TeQoin wallet\u2026';
+  els.autofetchSpinner.style.display = 'block';
+
+  try {
+    const res = await fetch(WALLET_LOOKUP_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ initData }),
+      signal: AbortSignal.timeout(6000),
+    });
+
+    // 503 = TEQOIN_WALLET_API env var not configured on server yet — silent fallback
+    if (res.status === 503) { els.autofetchRow.classList.remove('visible'); return; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const wallet = data?.wallet || data?.address || data?.walletAddress || '';
+
+    if (isLikelyAddress(wallet)) {
+      els.addressInput.value = wallet;
+      validateAddress();
+      // Update status to success (hide spinner, show tick)
+      els.autofetchSpinner.style.display = 'none';
+      els.autofetchStatus.textContent = '\u2713 Wallet auto-filled from your TeQoin account';
+      setHint('Wallet address loaded from @TeQoin_Wallet_Bot \u2713', 'success');
+    } else {
+      els.autofetchRow.classList.remove('visible');
+    }
+  } catch {
+    // Silently hide on error — don't alarm the user
+    els.autofetchRow.classList.remove('visible');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TeQoin Wallet Bot button
+// ─ Inside Telegram: uses tg.openTelegramLink for seamless in-app navigation
+// ─ Outside Telegram (browser dev): falls back to window.open
+// When the user returns to the mini-app after visiting the wallet bot,
+// tg.onEvent('activated') fires and we auto-try clipboard paste so their
+// copied address fills in with zero effort.
+// ─────────────────────────────────────────────────────────────────────────────
+const WALLET_BOT_URL = 'https://t.me/TeQoin_Wallet_Bot';
+
+els.teqoinWalletBtn.addEventListener('click', () => {
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(WALLET_BOT_URL);
+  } else {
+    window.open(WALLET_BOT_URL, '_blank', 'noopener');
+  }
+});
+
+// When user returns to the faucet after visiting the wallet bot,
+// auto-try to read whatever they copied from the clipboard.
+if (tg) {
+  const handleActivated = async () => {
+    // Only auto-paste if address field is still empty
+    if (isLikelyAddress(els.addressInput.value)) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (isLikelyAddress(text.trim())) {
+        els.addressInput.value = text.trim();
+        validateAddress();
+        setHint('Address pasted from clipboard \u2713', 'success');
+      }
+    } catch {
+      /* clipboard permission denied — user can paste manually */
+    }
+  };
+
+  // Telegram Mini App v6.9+ fires 'activated' when the app regains focus
+  tg.onEvent('activated', handleActivated);
+  // Also listen for the page becoming visible again (standard browser API)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') handleActivated();
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Logo helper to avoid race conditions if images are already cached/loaded
@@ -299,3 +413,7 @@ async function handleClaim() {
 
 els.claimBtn.addEventListener('click', handleClaim);
 updateClaimEnabled();
+
+// Attempt to auto-fill wallet from TeQoin backend on load.
+// Silent no-op while WALLET_LOOKUP_API is null in config.js.
+tryAutoFetchWallet();

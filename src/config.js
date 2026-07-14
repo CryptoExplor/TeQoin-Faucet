@@ -7,6 +7,18 @@
 // not a Vercel server proxy.
 export const FAUCET_API = 'https://api2.teqoin.io/api/v1/Faucet/Claim';
 
+// ─── Wallet Lookup API ───────────────────────────────────────────────────────
+// Set this to the TeQoin endpoint that returns the user's wallet address
+// given their Telegram initData as proof of identity.
+//
+// Expected request:  GET <this URL>
+//                   Header: X-Telegram-Init-Data: <raw tg.initData>
+// Expected response: { wallet: "0x..." }   (or address / walletAddress)
+//
+// Leave blank until the TeQoin team exposes the endpoint.
+// The auto-fetch logic silently skips if this is null.
+export const WALLET_LOOKUP_API = '/api/get-wallet';
+
 // nativeOnly: true  → ETH only
 // nativeOnly: false → ETH + USDT + USDC + DAI (25 each)
 export const FAUCET_TOKENS = [
