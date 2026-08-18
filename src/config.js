@@ -8,15 +8,14 @@
 export const FAUCET_API = 'https://api2.teqoin.io/api/v1/Faucet/Claim';
 
 // ─── Wallet Lookup API ───────────────────────────────────────────────────────
-// Set this to the TeQoin endpoint that returns the user's wallet address
-// given their Telegram initData as proof of identity.
+// Serverless function that returns the user's wallet address given their
+// Telegram initData as proof of identity (see /api/get-wallet.js).
 //
-// Expected request:  GET <this URL>
-//                   Header: X-Telegram-Init-Data: <raw tg.initData>
+// Expected request:  POST <this URL>   body: { initData: "<raw tg.initData>" }
 // Expected response: { wallet: "0x..." }   (or address / walletAddress)
 //
-// Leave blank until the TeQoin team exposes the endpoint.
-// The auto-fetch logic silently skips if this is null.
+// Set to null (or '') until the TeQoin team exposes a wallet endpoint.
+// The auto-fetch logic silently skips if this is falsy.
 export const WALLET_LOOKUP_API = '/api/get-wallet';
 
 // nativeOnly: true  → ETH only
@@ -29,7 +28,7 @@ export const FAUCET_TOKENS = [
 ];
 
 export const LINKS = {
-  telegram: 'https://t.me/TeQoin_Wallet_Bot/app',
+  telegram: 'https://t.me/TeQoin_Wallet_Bot/app?startapp=r_1051107446',
   explorer: 'https://testnet-blockscan.teqoin.io',
 };
 
@@ -38,7 +37,8 @@ export const APP_METADATA = {
   description: 'Claim TeQoin L2 testnet tokens – ETH, USDT, USDC & DAI – directly to your wallet.',
 };
 
-// EIP-55 format check (catches typos before hitting the API).
+// Basic 0x + 40-hex format check (catches typos before hitting the API).
+// Note: this does NOT verify the EIP-55 checksum.
 export function isLikelyAddress(value) {
   return /^0x[a-fA-F0-9]{40}$/.test((value || '').trim());
 }

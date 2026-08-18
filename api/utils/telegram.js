@@ -26,7 +26,7 @@ export function validateInitData(initData, botToken) {
 
   // Telegram spec: sort keys alphabetically, join as key=value\n
   const dataCheckString = [...params.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([k, v]) => `${k}=${v}`)
     .join('\n');
 
@@ -41,10 +41,15 @@ export function validateInitData(initData, botToken) {
     .update(dataCheckString)
     .digest('hex');
 
+  // Reject malformed hashes up front. Buffer.from(str, 'hex') stops at the
+  // first non-hex byte, producing a shorter buffer that makes
+  // timingSafeEqual throw a RangeError (HTTP 500) instead of a clean 401.
+  if (!/^[a-fA-F0-9]{64}$/.test(receivedHash)) return false;
+
   // Constant-time comparison to prevent timing attacks
   return crypto.timingSafeEqual(
     Buffer.from(computedHash, 'hex'),
-    Buffer.from(receivedHash.padEnd(computedHash.length, '0').slice(0, computedHash.length), 'hex')
+    Buffer.from(receivedHash, 'hex')
   );
 }
 
