@@ -53,6 +53,7 @@ const els = {
 
 // Set static hrefs
 els.explorerLink.href = LINKS.explorer;
+els.tgBotLink.href = LINKS.telegram;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auto-fetch wallet address from TeQoin backend using Telegram user ID
@@ -128,7 +129,7 @@ async function tryAutoFetchWallet() {
 // tg.onEvent('activated') fires and we auto-try clipboard paste so their
 // copied address fills in with zero effort.
 // ─────────────────────────────────────────────────────────────────────────────
-const WALLET_BOT_URL = 'https://t.me/TeQoin_Wallet_Bot/app?startapp=r_1051107446';
+const WALLET_BOT_URL = LINKS.telegram;
 
 els.teqoinWalletBtn.addEventListener('click', () => {
   if (tg?.openTelegramLink) {
@@ -345,7 +346,6 @@ els.detectBtn.addEventListener('click', async () => {
   }
   try {
     els.detectBtn.disabled = true;
-    els.detectBtn.querySelector('span') && (els.detectBtn.querySelector('span').textContent = 'Requesting…');
 
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     if (accounts?.[0]) {
