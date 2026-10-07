@@ -2,10 +2,16 @@
 // TeQoin Testnet Faucet — configuration
 // ============================================================================
 
-// Official faucet endpoint (POST { wallet, nativeOnly }).
-// Requests are sent directly from the user's browser → their real IP is used,
-// not a Vercel server proxy.
-export const FAUCET_API = 'https://api2.teqoin.io/api/v1/Faucet/Claim';
+// Claim endpoint — a SAME-ORIGIN serverless proxy (see /api/claim.js).
+//
+// TeQoin's API (https://api2.teqoin.io) only sends CORS headers for its own
+// origin (https://teqoin.io), so browsers block direct fetch() calls from any
+// other domain with "No 'Access-Control-Allow-Origin' header is present".
+// CORS is a browser-only policy: POSTing to our own /api/claim, which forwards
+// server-to-server (with the real client IP in X-Forwarded-For), sidesteps it
+// while keeping TeQoin's per-IP rate limits fair.
+// The real upstream URL lives in api/claim.js, not here.
+export const FAUCET_API = '/api/claim';
 
 // ─── Wallet Lookup API ───────────────────────────────────────────────────────
 // Serverless function that returns the user's wallet address given their

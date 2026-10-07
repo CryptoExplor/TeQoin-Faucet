@@ -1,9 +1,16 @@
 // ============================================================================
-// Faucet claim - a plain client for TeQoin's own faucet API.
+// Faucet claim client — talks to our same-origin proxy at /api/claim.
 // ----------------------------------------------------------------------------
+// Why not call TeQoin's API directly? Their server only returns CORS headers
+// for https://teqoin.io, so browsers refuse cross-origin fetch() from this
+// app's domain ("No 'Access-Control-Allow-Origin' header is present").
+// The proxy forwards server-to-server — where CORS doesn't apply — and passes
+// TeQoin's response (including cooldown / rate-limit errors) back verbatim.
+// The user's real IP is forwarded via X-Forwarded-For so upstream per-IP
+// limits still identify each user individually.
+//
 // Deliberately minimal:
-//   - No fingerprint / User-Agent spoofing - the browser sends its real one.
-//   - No proxy - the request goes out over the visitor's own connection.
+//   - No fingerprint / User-Agent spoofing.
 //   - No multi-wallet queue, no retry-until-it-slips-past-a-rate-limit logic.
 // If TeQoin's API says cooldown or rate-limited, that's surfaced to the user
 // as-is rather than worked around.
@@ -15,16 +22,13 @@ export async function claimFaucet({ wallet, nativeOnly }) {
   try {
     res = await fetch(FAUCET_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ wallet, nativeOnly }),
     });
   } catch (err) {
-    // Most likely cause here is TeQoin's API not sending CORS headers that
-    // allow this app's origin - see the "CORS" section in README.md. Surface
-    // it plainly rather than silently retrying or routing around it.
     throw new Error(
-      `Could not reach the faucet API (${err instanceof Error ? err.message : 'network error'}). ` +
-      `This usually means TeQoin's API doesn't allow browser requests from this domain (CORS) - see README.`,
+      `Could not reach the faucet service (${err instanceof Error ? err.message : 'network error'}). ` +
+        `Check your connection and try again.`,
     );
   }
 
@@ -45,6 +49,10 @@ export async function claimFaucet({ wallet, nativeOnly }) {
     message = Array.isArray(json.errors) ? json.errors.join(', ') : String(json.errors);
   } else if (json?.data?.message) {
     message = json.data.message;
+  } else if (json?.error) {
+    // Shape used by our own proxy for pre-upstream failures
+    // (validation, rate guard, upstream unreachable).
+    message = String(json.error);
   } else if (!res.ok) {
     message = `HTTP ${res.status}: ${text.slice(0, 120)}`;
   } else {
