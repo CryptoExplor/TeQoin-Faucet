@@ -412,8 +412,10 @@ function setStatusSuccessWithTx(txHash) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Claim
-// Requests go browser → TeQoin API directly, carrying the USER's real IP.
-// No server proxy involved.
+// Requests go browser → our same-origin /api/claim proxy → TeQoin API.
+// (Direct browser → TeQoin calls are blocked by their CORS policy, which only
+// allows https://teqoin.io. The proxy forwards the user's real IP via
+// X-Forwarded-For so upstream per-IP limits still apply per user.)
 // ─────────────────────────────────────────────────────────────────────────────
 let claiming = false;
 
