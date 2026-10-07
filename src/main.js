@@ -1,9 +1,9 @@
 import { FAUCET_TOKENS, APP_METADATA, LINKS, WALLET_LOOKUP_API, isLikelyAddress, recordClaim, getLastClaimTime, formatTimeAgo } from './config.js';
 import { claimFaucet } from './faucet.js';
-import { inject } from '@vercel/analytics';
+import { initAnalytics, trackClaimAttempt, trackClaimSuccess, trackClaimFailed, trackModeChanged, trackWalletAutofilled } from './analytics.js';
 
-// Initialize Vercel Web Analytics
-inject();
+// Vercel Web Analytics + Speed Insights (page views, Web Vitals, custom events)
+initAnalytics();
 
 document.title = APP_METADATA.name;
 
@@ -108,6 +108,7 @@ async function tryAutoFetchWallet() {
     if (isLikelyAddress(wallet)) {
       els.addressInput.value = wallet;
       validateAddress();
+      trackWalletAutofilled();
       // Update status to success (hide spinner, show tick)
       els.autofetchSpinner.style.display = 'none';
       els.autofetchStatus.textContent = '\u2713 Wallet auto-filled from your TeQoin account';
@@ -270,6 +271,7 @@ document.querySelectorAll('.toggle-btn').forEach((btn) => {
       b.classList.toggle('active', b === btn);
     });
     renderTokenGrid();
+    trackModeChanged(nativeOnly);
   });
 });
 
@@ -437,6 +439,7 @@ async function handleClaim() {
   }
 
   setStatus('Sending request to TeQoin faucet…');
+  trackClaimAttempt(nativeOnly);
 
   try {
     const result = await claimFaucet({ wallet, nativeOnly });
@@ -445,13 +448,18 @@ async function handleClaim() {
       recordClaim(wallet);
       setStatusSuccessWithTx(result.txHash);
       tg?.HapticFeedback?.notificationOccurred('success');
+      trackClaimSuccess(nativeOnly);
     } else {
-      setStatus(result.message || 'Claim failed. Try again later.', 'error');
+      const message = result.message || 'Claim failed. Try again later.';
+      setStatus(message, 'error');
       tg?.HapticFeedback?.notificationOccurred('error');
+      trackClaimFailed(nativeOnly, message);
     }
   } catch (err) {
-    setStatus(err instanceof Error ? err.message : String(err), 'error');
+    const message = err instanceof Error ? err.message : String(err);
+    setStatus(message, 'error');
     tg?.HapticFeedback?.notificationOccurred('error');
+    trackClaimFailed(nativeOnly, message);
   } finally {
     claiming = false;
     updateClaimEnabled();

@@ -98,8 +98,19 @@ by the optional `/api/get-wallet` Telegram auto-fill.)
 └── src/
     ├── config.js         # API and token list configurations
     ├── faucet.js          # Claim client (POSTs to /api/claim)
+    ├── analytics.js      # Vercel Analytics + Speed Insights + claim events
     └── main.js           # DOM controllers & wallet address listeners
 ```
+
+## Analytics
+
+Vercel **Web Analytics** (page views) and **Speed Insights** (performance) are
+initialized in `src/analytics.js`, plus privacy-safe custom events for the
+claim funnel — `claim_attempt`, `claim_success`, `claim_failed` (with coarse
+`reason`: `cooldown` / `rate_limited` / `api_unreachable` / `invalid_address` /
+`faucet_empty` / `other`), `claim_mode_changed`, and `wallet_autofilled`.
+Wallet addresses, tx hashes, and raw API messages are never tracked. Events
+appear in the Vercel dashboard for production deployments.
 
 ## License
 MIT
